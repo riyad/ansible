@@ -1155,3 +1155,66 @@
       - testend1 is changed
       - testend2 is changed
       - testend_file.stat.checksum == 'ef36116966836ce04f6b249fd1837706acae4e19'
+
+# Test preservation of line endings
+
+- name: Deploy the test file for line endings
+  copy:
+    src: line_endings_test.txt
+    dest: "{{ output_dir }}/line_endings_test.txt"
+  register: result
+
+- name: Assert that the test file was deployed
+  assert:
+    that:
+      - result is changed
+      - result.checksum == '25d6d9acad65784400d81ca8b97dbaf21e24223d'
+      - result.state == 'file'
+
+- name: insert a line after the first UNIX line
+  lineinfile:
+    dest: "{{ output_dir }}/line_endings_test.txt"
+    state: present
+    line: "New line after 1unix"
+    insertafter: "^1unix$"
+  register: result
+
+- name: assert that the line was inserted after the first UNIX line
+  assert:
+    that:
+      - result is changed
+      - "result.msg == 'line added'"
+
+- name: stat the test after insert after the first UNIX line
+  stat:
+    path: "{{ output_dir }}/line_endings_test.txt"
+  register: result
+
+- name: assert test checksum matches after the insert after the first UNIX line
+  assert:
+    that:
+      - "result.stat.checksum == '81c491fd9d19f63d419e0aa2d4c40ce31485d80b'"
+
+- name: insert a line after the last DOS line
+  lineinfile:
+    dest: "{{ output_dir }}/line_endings_test.txt"
+    state: present
+    line: "New line after 8dos"
+    insertafter: "^8dos\r$"  # note the \r
+  register: result
+
+- name: assert that the line was inserted after the last DOS line
+  assert:
+    that:
+      - result is changed
+      - "result.msg == 'line added'"
+
+- name: stat the test after insert after the last DOS line
+  stat:
+    path: "{{ output_dir }}/line_endings_test.txt"
+  register: result
+
+- name: assert test checksum matches after the insert after the last DOS line
+  assert:
+    that:
+      - "result.stat.checksum == 'decf09dda9109a9f1bfe8a25e318501c0a4fc84b'"
